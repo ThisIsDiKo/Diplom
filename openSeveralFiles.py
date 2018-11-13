@@ -14,6 +14,7 @@ class DataVisualisation(QMainWindow):
         self.l_press = []
         self.r_pos = []
         self.r_press = []
+        self.filenames = []
 
         self.movement = [0]
         self.floatingVar = [0 for x in range(20)]
@@ -31,65 +32,55 @@ class DataVisualisation(QMainWindow):
         self.csvFileName = ''
 
         self.open_file()
-        self.processCalibration()
+        #self.processCalibration()
         #self.prepare_data()
-        #self.show_data()
+        self.push_to_one_zero()
+        self.show_data()
         #self.write_to_csv()
 
 
     def open_file(self):
         prevSpd = 0.0
         prevTime = 0
-        fname = QFileDialog.getOpenFileName(self,'Open File', 'C:\\Users\\ADiKo\\Desktop\\', 'txt file (*.txt)')[0]
-        print(fname)
-        self.csvFileName = fname.split('.')[0] + ".csv"
+        self.filenames = QFileDialog.getOpenFileNames(self,'Open File', 'C:\\Users\\ADiKo\\Desktop\\', 'txt file (*.txt)')[0]
+        print(self.filenames)
+        #self.csvFileName = fname.split('.')[0] + ".csv"
         try:
-            f = open(fname, 'r')
-            print("file opened")
-            for line in f:
-                print(line, end='')
-                if line:
-                    l = line.split(',')
-                    if l[0] is 'a':
-                        self.timings.append(int(l[1]))
-                        self.l_pos.append(int(l[2]))
-                        self.l_press.append(int(l[3]))
-                        self.r_pos.append(int(l[4]))
-                        self.r_press.append(int(l[5]))
+            for fname in self.filenames:
+                f = open(fname, 'r')
+                temp_timings = []
+                temp_l_pos = []
+                temp_l_press = []
+                temp_r_pos = []
+                temp_r_press = []
+                print("file opened")
+                for line in f:
+                    if line and len(line) > 5:
+                        l = line.split(',')
+                        if l[0] is 'a':
+                            temp_timings.append(int(l[1]))
+                            temp_l_pos.append(int(l[2]))
+                            temp_l_press.append(int(l[3]))
+                            temp_r_pos.append(int(l[4]))
+                            temp_r_press.append(int(l[5]))
 
-                    if l[0] is 'b':
-                        lat1 = float(l[1][:2])
-                        lat2 = float(l[1][2:]) * 100 / 60 / 100;
-                        lat = lat1 + lat2;
-                        if l[2] is 'S':
-                            lat = -lat
-
-                        lon1 = float(l[3][:2])
-                        lon2 = float(l[3][2:]) * 100 / 60 / 100;
-                        lon = lon1 + lon2;
-                        if l[4] is 'W':
-                            lon = -lon
-
-                        self.lat.append(lat)
-                        self.lon.append(lon)
-                        self.speed.append(float(l[5]))
-
-
-            print("Number of GPS markers:", len(self.lat))
-            for i in range(5):
-                print(self.lat[i], self.lon[i], self.speed[i])
-            f.close()
+                f.close()
+                self.timings.append(temp_timings)
+                self.l_pos.append(temp_l_pos)
+                self.l_press.append(temp_l_press)
+                self.r_pos.append(temp_r_pos)
+                self.r_press.append(temp_r_press)
 
         except Exception as ex:
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(ex).__name__, ex.args)
             print(message)
 
-        delta = self.timings[0]
-        print("D:", delta)
-        for i in range(len(self.timings)):
-            self.timings[i] -= delta
-        print("done")
+        for timings_array in self.timings:
+            delta = timings_array[0]
+            for j in range(len(timings_array)):
+                timings_array[j] -= delta
+
 
     def processCalibration(self):
         numOfIntervals = 64
@@ -294,28 +285,54 @@ class DataVisualisation(QMainWindow):
 
 
 
+    def push_to_one_zero(self):
+        if len(self.l_pos) < 2:
+            return
+        list_of_indx = []
+        list_of_indx2 = []
+        for pos in self.l_pos[0]:
+            got = 0
+            for pos_array in self.l_pos:
+                if pos in pos_array:
+                    got += 1
+            if got == len(self.l_pos):
+                for pos_array in self.l_pos:
+                    list_of_indx.append(pos_array.index(pos))
+                break
+
+        for i in range(len(self.l_pos[0]) - 1,-1,-1):
+            got = 0
+            for pos_array in self.l_pos:
+                if self.l_pos[0][i] in pos_array:
+                    got += 1
+            if got == len(self.l_pos):
+                for pos_array in self.l_pos:
+                    list_of_indx2.append(pos_array.index(self.l_pos[0][i]))
+                break
+
+        for i in range(len(self.l_pos)):
+            self.timings[i] = self.timings[i][list_of_indx[i]:list_of_indx2[i]]
+            self.l_pos[i] = self.l_pos[i][list_of_indx[i]:list_of_indx2[i]]
+            self.l_press[i] = self.l_press[i][list_of_indx[i]:list_of_indx2[i]]
+
+        for i in range(len(self.l_pos)):
+            delta = self.timings[i][0]
+            for j in range(len(self.timings[i])):
+                self.timings[i][j] -= delta
+
+        print("indx:", list_of_indx)
+
+
+
 
     def show_data(self):
-        x = self.timings[:]
-        y1 = [130 for i in x]
-        y2 = [-130 for i in x]
-        print("timings: ", self.timings[:10])
-        print(len(self.timings), len(self.floatingVar))
-        plt.plot(self.timings, self.l_pos, 'r')
-        #plt.plot(self.timings, self.l_press, 'b')
-        #plt.plot(self.timings, self.movement, 'g')
-        #plt.plot(self.timings, self.floatingVar, 'b')
-        #plt.plot(self.timings, self.floatVarSpd, 'k')
-        #plt.scatter(self.overMarkX, self.overMarkY, c='k')
-        #plt.scatter(self.moreThanVarX, self.moreThanVarY, c='c')
-
-        #plt.plot(x, y1, 'y')
-        #plt.plot(x, y2, 'y')
-
-        #plt.plot(self.x1_par, self.y1_par, 'g')
-        #plt.plot(self.x2_lin, self.y2_lin, 'k')
-        #plt.plot(self.x3_par, self.y3_par, 'b')
-
+        colors = ['r', 'g', 'b', 'c', 'y', 'k']
+        for i in range(len(self.timings)):
+            plt.figure(1)
+            plt.plot(self.timings[i], self.l_pos[i], colors[i])
+            plt.figure(2)
+            plt.plot(self.timings[i], self.l_press[i], colors[i])
+            print(self.filenames[i], ":", colors[i], "time:", self.timings[i][-1], "mean pressure:", mean(self.l_press[i]))
         plt.grid(True)
         plt.show()
 
