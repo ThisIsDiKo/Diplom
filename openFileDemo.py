@@ -3,6 +3,8 @@ import sys
 import matplotlib.pyplot as plt
 from statistics import median, variance, mean
 from math import sqrt
+import numpy as np
+from scipy.signal import butter, lfilter, freqz
 
 
 class DataVisualisation(QMainWindow):
@@ -14,6 +16,9 @@ class DataVisualisation(QMainWindow):
         self.l_press = []
         self.r_pos = []
         self.r_press = []
+        self.navinfo = []
+
+        self.l_pos_filtered = []
 
         self.movement = [0]
         self.floatingVar = [0 for x in range(20)]
@@ -32,14 +37,81 @@ class DataVisualisation(QMainWindow):
 
         self.open_file()
         self.processCalibration()
+
         #self.prepare_data()
+        #self.filter_position()
         #self.show_data()
         #self.write_to_csv()
 
+    def filter_position(self):
+        dang_x = []
+        dang_y = []
+
+        fs = 40.0
+        order = 5
+        cutoff = 1
+        filtered = []
+        filtered = butter_lowpass_filter(self.l_pos, cutoff, fs, order)
+        #filtered_mov = butter_lowpass_filter(self.movement, 2.0, fs, order)
+        print("len 1:", len(self.l_pos), "len 2:", len(filtered))
+
+        triggered = False
+        start_ind = 0
+        end_ind = 0
+        start_pos = 0
+        p_time = 0
+        start_filtered = 0
+        road_imp = {'start_ind': 0,
+                    'start_pos': 0,
+                    'max_ind': 0,
+                    'max_pos': 0,
+                    'max_pos_time': 0,
+                    'end_ind': 0,
+                    'navinfo': (0,0)
+                    }
+        road_imp_list = []
+        for i in range(len(self.l_pos)):
+            temp = abs(self.l_pos[i] - filtered[i])
+            if temp > 200:
+                if not triggered:
+                    triggered = True
+                    road_imp['start_ind'] = i
+                    road_imp['start_pos'] = self.l_pos[i]
+                    start_filtered = filtered[i]
+            else:
+                if triggered:
+                    triggered = False
+                    road_imp['end_ind'] = i
+                    road_imp['max_pos'] = road_imp['start_pos']
+                    road_imp['max_ind'] = road_imp['start_ind']
+                    road_imp['max_pos_time'] = self.timings[road_imp['start_ind']]
+                    road_imp['navinfo'] = self.navinfo[road_imp['start_ind']]
+
+                    for h in range(road_imp['start_ind'], road_imp['end_ind']+1, 1):
+                        if abs(filtered[h] - self.l_pos[h]) > abs(filtered[h] - road_imp['max_pos']):
+                            road_imp['max_pos'] = self.l_pos[h]
+                            road_imp['max_ind'] = h
+                            road_imp['max_pos_time'] = self.timings[h]
+                            road_imp['navinfo'] = self.navinfo[h]
+                    road_imp_list.append(road_imp.copy())
+
+        for p in road_imp_list:
+            print(p,)
+        plt.plot(self.timings, self.l_pos, 'r')
+        plt.plot(self.timings[100:], filtered[100:], 'b')
+        dang_x = [o['max_pos_time'] for o in road_imp_list]
+        dang_y = [o['max_pos'] for o in road_imp_list]
+        plt.scatter(dang_x, dang_y, color='k')
+        #plt.plot(self.timings, self.movement, 'g')
+        #plt.plot(self.timings[100:], filtered_mov[100:], 'k')
+        self.write_to_csv(road_imp_list)
+        plt.grid(True)
+        plt.show()
 
     def open_file(self):
         prevSpd = 0.0
         prevTime = 0
+        last_navinfo = (0,0)
         fname = QFileDialog.getOpenFileName(self,'Open File', 'C:\\Users\\ADiKo\\Desktop\\', 'txt file (*.txt)')[0]
         print(fname)
         self.csvFileName = fname.split('.')[0] + ".csv"
@@ -56,6 +128,7 @@ class DataVisualisation(QMainWindow):
                         self.l_press.append(int(l[3]))
                         self.r_pos.append(int(l[4]))
                         self.r_press.append(int(l[5]))
+                        self.navinfo.append(last_navinfo)
 
                     if l[0] is 'b':
                         lat1 = float(l[1][:2])
@@ -73,6 +146,7 @@ class DataVisualisation(QMainWindow):
                         self.lat.append(lat)
                         self.lon.append(lon)
                         self.speed.append(float(l[5]))
+                        last_navinfo = (lat, lon)
 
 
             print("Number of GPS markers:", len(self.lat))
@@ -183,6 +257,7 @@ class DataVisualisation(QMainWindow):
         (a2, b2, c2) = get_parabola_coeff(mass[temp][0], mass[temp][1], mass[int(len(mass) - temp / 2)][0], mass[int(len(mass) - temp / 2)][1],
                                           mass[len(mass) - 1][0], mass[len(mass) - 1][1])
 
+        print("coeffs:", (a1, b1, c1), (a2, b2, c2))
         q = self.l_pos.index(mass[0][1])
         w = self.l_pos.index(mass[temp][1])
         x1 = self.timings[q:w + 1]
@@ -319,19 +394,20 @@ class DataVisualisation(QMainWindow):
         plt.grid(True)
         plt.show()
 
-    def write_to_csv(self):
+    def write_to_csv(self, data):
         try:
             #print(self.csvFileName)
-            print(len(self.lat),len(self.lon), len(self.markersSpd))
             f = open(self.csvFileName, 'w')
-            f.write('Coordinates,speed\n')
+            f.write('Coordinates\n')
 
-            for i in range(len(self.lat)):
-                f.write('\"' + str(self.lat[i]) + ',' + str(self.lon[i]) + '\",\"' + str(self.markersSpd[i])+'\"\n')
+            for imp in data:
+                if imp['navinfo'][0] != 0.0:
+                    f.write('\"' + str(imp['navinfo'][0]) + ',' + str(imp['navinfo'][1]) + '\"\n')
             f.close()
-        except:
-            print("error")
-
+        except Exception as ex:
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
 
 
 
@@ -359,6 +435,19 @@ def get_error_meaning(x_ref, y_ref, x, y):
 
     err = sqrt(err)
     return err
+
+def butter_lowpass(cutoff, fs, order=5):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    return b, a
+
+def butter_lowpass_filter(data, cutoff, fs, order=5):
+    b, a = butter_lowpass(cutoff, fs, order=order)
+    print("b coeff:", b)
+    print("a coeff:", a)
+    y = lfilter(b, a, data)
+    return y
 
 if __name__ == '__main__':
     print(get_parabola_coeff(0, 5, 1, 6, 2, 9))

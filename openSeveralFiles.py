@@ -346,8 +346,10 @@ class DataVisualisation(QMainWindow):
             for i in range(len(self.lat)):
                 f.write('\"' + str(self.lat[i]) + ',' + str(self.lon[i]) + '\",\"' + str(self.markersSpd[i])+'\"\n')
             f.close()
-        except:
-            print("error")
+        except Exception as ex:
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print(message)
 
 
 
