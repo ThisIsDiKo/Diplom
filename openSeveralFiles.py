@@ -330,10 +330,16 @@ class DataVisualisation(QMainWindow):
         for i in range(len(self.timings)):
             plt.figure(1)
             plt.plot(self.timings[i], self.l_pos[i], colors[i])
+            plt.ylabel("Позиция")
+            plt.xlabel("Время, мс")
+            plt.grid(True)
             plt.figure(2)
             plt.plot(self.timings[i], self.l_press[i], colors[i])
             print(self.filenames[i], ":", colors[i], "time:", self.timings[i][-1], "mean pressure:", mean(self.l_press[i]))
-        plt.grid(True)
+            plt.ylabel("Давление")
+            plt.xlabel("Время, мс")
+            plt.grid(True)
+
         plt.show()
 
     def write_to_csv(self):

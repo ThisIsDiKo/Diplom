@@ -33,15 +33,117 @@ class DataVisualisation(QMainWindow):
         self.overMarkX = []
         self.overMarkY = []
 
+        self.pos_cm = []
+
         self.csvFileName = ''
 
         self.open_file()
+        #print("Variance is", variance(self.l_pos))
+        #self.calculate_acceleration()
         self.processCalibration()
 
         #self.prepare_data()
         #self.filter_position()
         #self.show_data()
         #self.write_to_csv()
+    def calculate_acceleration(self):
+        clearence_range = 0.13
+        max_pos = 3100
+        min_pos = 1900
+
+        speed = [0]
+        acceleration = [0]
+        acc_2 = [0]
+        pos = []
+        time = []
+        filtered_with_var = []
+        filtered_with_var2 = []
+
+        for p in self.l_pos:
+            pos.append((p - min_pos) / (max_pos - min_pos) * clearence_range)
+
+        for t in self.timings:
+            time.append(t / 1000)
+
+        for i in range(1, len(pos)):
+            try:
+                speed.append((pos[i] - pos[i-1]) / (time[i] - time[i-1]))
+            except Exception as ex:
+                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                message = template.format(type(ex).__name__, ex.args)
+                print(message, "timings", i, time[i], time[i-1])
+
+        for i in range(1, len(pos)):
+            try:
+                acceleration.append((speed[i] - speed[i-1]) / (time[i] - time[i-1]))
+            except Exception as ex:
+                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                message = template.format(type(ex).__name__, ex.args)
+                print(message, "timings", i, time[i], time[i-1])
+
+        for i in range(1, len(pos)):
+            try:
+                acc_2.append((acceleration[i] - acceleration[i-1]) / (time[i] - time[i-1]) * 10)
+            except Exception as ex:
+                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                message = template.format(type(ex).__name__, ex.args)
+                print(message, "timings", i, time[i], time[i-1])
+
+        fs = 40.0
+        order = 5
+        cutoff = 1
+        filtered = butter_lowpass_filter(self.l_pos, cutoff, fs, order)
+
+        pos_f = []
+
+        for p in filtered:
+            pos_f.append((p - min_pos) / (max_pos - min_pos) * clearence_range)
+
+        for i in range(len(pos)-20):
+            var = sqrt(variance(pos[i:i+20]))
+            filtered_with_var.append(pos_f[i+20] + 2*var)
+            filtered_with_var2.append(pos_f[i+20] - 2*var)
+
+        print("len: ", len(self.timings), len(speed))
+        thr = [10 for i in time]
+
+        thr1 = [1250 for i in time]
+        thr2 = [1770 for i in time]
+        thr3 = [6100 for i in time]
+
+        plt.figure(1)
+        ax1 = plt.subplot(411)
+        plt.plot(time, pos, 'r')
+        plt.plot(time[100:], pos_f[100:], 'b')
+        plt.plot(time[100:], filtered_with_var[80:], 'y')
+        plt.plot(time[100:], filtered_with_var2[80:], 'y')
+        #plt.setp(ax1.get_xticklabels(), fontsize=6)
+        plt.ylabel("Позиция, м")
+        plt.grid(True)
+
+        ax2 = plt.subplot(412, sharex=ax1)
+        plt.plot(time, speed, 'b')
+        #plt.setp(ax2.get_xticklabels(), visible=False)
+        plt.ylabel("Скорость, м/с")
+        plt.grid(True)
+
+        ax3 = plt.subplot(413, sharex=ax1)
+        plt.plot(time, acceleration, 'g')
+        plt.plot(time, thr, 'y')
+        #plt.setp(ax3.get_xticklabels(), visible=False)
+        plt.ylabel("Ускорение, м/с^2")
+        plt.grid(True)
+
+        ax4 = plt.subplot(414, sharex=ax1)
+        plt.plot(time, acc_2, 'k')
+        #plt.plot(time, thr1, 'y')
+        #plt.plot(time, thr2, 'y')
+        plt.plot(time, thr3, 'y')
+        #plt.setp(ax3.get_xticklabels(), visible=False)
+        plt.ylabel("Рывок, cм/с^3")
+        plt.xlabel("Время, с")
+        plt.grid(True)
+        plt.show()
 
     def filter_position(self):
         dang_x = []
@@ -123,12 +225,21 @@ class DataVisualisation(QMainWindow):
                 if line:
                     l = line.split(',')
                     if l[0] is 'a':
-                        self.timings.append(int(l[1]))
-                        self.l_pos.append(int(l[2]))
-                        self.l_press.append(int(l[3]))
-                        self.r_pos.append(int(l[4]))
-                        self.r_press.append(int(l[5]))
-                        self.navinfo.append(last_navinfo)
+                        if self.timings:
+                            if int(l[1]) - self.timings[-1] >= 25:
+                                self.timings.append(int(l[1]))
+                                self.l_pos.append(int(l[2]))
+                                self.l_press.append(int(l[3]))
+                                self.r_pos.append(int(l[4]))
+                                self.r_press.append(int(l[5]))
+                                self.navinfo.append(last_navinfo)
+                        else:
+                            self.timings.append(int(l[1]))
+                            self.l_pos.append(int(l[2]))
+                            self.l_press.append(int(l[3]))
+                            self.r_pos.append(int(l[4]))
+                            self.r_press.append(int(l[5]))
+                            self.navinfo.append(last_navinfo)
 
                     if l[0] is 'b':
                         lat1 = float(l[1][:2])
@@ -163,7 +274,7 @@ class DataVisualisation(QMainWindow):
         print("D:", delta)
         for i in range(len(self.timings)):
             self.timings[i] -= delta
-        print("done")
+        print("done", self.timings[26595:])
 
     def processCalibration(self):
         numOfIntervals = 64
@@ -297,12 +408,50 @@ class DataVisualisation(QMainWindow):
         lp_approx['y'].extend(y2)
 
 
-        plt.plot(self.timings, self.l_pos, 'r')
-        plt.plot(plp_approx['x'], plp_approx['y'], 'g')
-        plt.plot(lll_approx['x'], lll_approx['y'], 'b')
-        plt.plot(l_approx['x'], l_approx['y'], 'k')
-        plt.plot(pp_approx['x'], pp_approx['y'], 'y')
-        plt.plot(lp_approx['x'], lp_approx['y'], 'c')
+        plt.figure(1)
+        plt.plot(self.timings, self.l_pos, 'k')
+        plt.plot(plp_approx['x'], plp_approx['y'], 'k--')
+        plt.title('График изменения клиренса')
+        plt.legend(('Эксперимент', 'Аппроксимация'))
+        plt.xlabel("Время, мс")
+        plt.ylabel("Позиция")
+        plt.grid(True)
+
+        plt.figure(2)
+        plt.plot(self.timings, self.l_pos, 'k')
+        plt.plot(lll_approx['x'], lll_approx['y'], 'k--')
+        plt.title('График изменения клиренса')
+        plt.legend(('Эксперимент', 'Аппроксимация'))
+        plt.xlabel("Время, мс")
+        plt.ylabel("Позиция")
+        plt.grid(True)
+
+        plt.figure(3)
+        plt.plot(self.timings, self.l_pos, 'k')
+        plt.plot(l_approx['x'], l_approx['y'], 'k--')
+        plt.title('График изменения клиренса')
+        plt.legend(('Эксперимент', 'Аппроксимация'))
+        plt.xlabel("Время, мс")
+        plt.ylabel("Позиция")
+        plt.grid(True)
+
+        plt.figure(4)
+        plt.plot(self.timings, self.l_pos, 'k')
+        plt.plot(pp_approx['x'], pp_approx['y'], 'k--')
+        plt.title('График изменения клиренса')
+        plt.legend(('Эксперимент', 'Аппроксимация'))
+        plt.xlabel("Время, мс")
+        plt.ylabel("Позиция")
+        plt.grid(True)
+
+        plt.figure(5)
+        plt.plot(self.timings, self.l_pos, 'k')
+        plt.plot(lp_approx['x'], lp_approx['y'], 'k--')
+        plt.title('График изменения клиренса')
+        plt.legend(('Эксперимент', 'Аппроксимация'))
+        plt.xlabel("Время, мс")
+        plt.ylabel("Позиция")
+        plt.grid(True)
 
         #print("len:", len(plp_approx['x']), len(lll_approx['x']), len(l_approx['x']), len(pp_approx['x']))
 
@@ -312,10 +461,10 @@ class DataVisualisation(QMainWindow):
         print("err pp:", get_error_meaning(self.timings, self.l_pos, pp_approx['x'], pp_approx['y']))
         print("err lp:", get_error_meaning(self.timings, self.l_pos, lp_approx['x'], lp_approx['y']))
         plt.grid(True)
+        plt.xlabel("Время, мс")
+        plt.ylabel("Позиция")
         plt.show()
 
-        for k in mass:
-            print(k)
 
 
     def prepare_data(self):
@@ -376,7 +525,10 @@ class DataVisualisation(QMainWindow):
         y2 = [-130 for i in x]
         print("timings: ", self.timings[:10])
         print(len(self.timings), len(self.floatingVar))
-        plt.plot(self.timings, self.l_pos, 'r')
+        plt.plot(self.timings, self.l_pos, 'k')
+        plt.title("График уменьшения клиренса")
+        plt.xlabel("Время, мс")
+        plt.ylabel("Позиция")
         #plt.plot(self.timings, self.l_press, 'b')
         #plt.plot(self.timings, self.movement, 'g')
         #plt.plot(self.timings, self.floatingVar, 'b')
@@ -433,7 +585,7 @@ def get_error_meaning(x_ref, y_ref, x, y):
         index = x_ref.index(x[i])
         err += (y_ref[index] - y[i]) ** 2
 
-    err = sqrt(err)
+    err = sqrt(err) / len(x)
     return err
 
 def butter_lowpass(cutoff, fs, order=5):
@@ -454,4 +606,4 @@ if __name__ == '__main__':
     print(get_error_meaning([1,2,3,4,5,6],[5,5,5,5,5,5],[2,3,4,5], [1,2,3,4]))
     app = QApplication(sys.argv)
     ex = DataVisualisation()
-   # sys.exit(app.exec_())
+    sys.exit(app.exec_())

@@ -41,14 +41,39 @@ class CalibrationModel(QMainWindow):
                                  'c3': 0}
 
         self.open_file()
+        #self.show_pressure()
         #self.invert_results()
         self.simulate_calibration_one_circuit()
+
     def invert_results(self):
         r = 2480
         for i in range(len(self.l_pos_up)):
             self.l_pos_up[i] = r + (r - self.l_pos_up[i])
         for i in range(len(self.l_pos_down)):
             self.l_pos_down[i] = r + (r - self.l_pos_down[i])
+
+    def show_pressure(self):
+        t1, d1 = fir_lowpass_filter(self.timings_down, self.l_press_down)
+        t2, d2 = fir_lowpass_filter(self.timings_up, self.l_press_up)
+
+        t3, d3 = med_filter(self.timings_down, self.l_press_down)
+        t4, d4 = med_filter(self.timings_up, self.l_press_up)
+        plt.figure(1)
+        plt.plot(self.timings_down, self.l_press_down, 'r')
+        plt.plot(t1, d1, 'b')
+        plt.plot(t3, d3, 'g')
+        plt.ylabel("Давление")
+        plt.xlabel("Время, мс")
+        plt.grid(True)
+
+        plt.figure(2)
+        #plt.plot(self.timings_up, self.l_press_up, 'r')
+        plt.plot(t2, d2, 'b')
+        #plt.plot(t4, d4, 'g')
+        plt.ylabel("Давление")
+        plt.xlabel("Время, мс")
+        plt.grid(True)
+        plt.show()
 
     def open_file(self):
         fname_down = QFileDialog.getOpenFileName(self, 'Движение вниз', 'C:\\Users\\ADiKo\\Desktop\\demos', 'txt file (*.txt)')[0]
@@ -65,6 +90,12 @@ class CalibrationModel(QMainWindow):
                         self.l_press_down.append(int(l[3]))
                         self.r_pos_down.append(int(l[4]))
                         self.r_press_down.append(int(l[5]))
+                    if ':' in line:
+                        l = line.split(':')[1].split(',')
+                        print(l)
+                        self.timings_down.append(int(l[0]))
+                        self.l_pos_down.append(int(l[1]))
+                        self.l_press_down.append(0)
             f.close()
 
             f = open(fname_up, 'r')
@@ -77,6 +108,11 @@ class CalibrationModel(QMainWindow):
                         self.l_press_up.append(int(l[3]))
                         self.r_pos_up.append(int(l[4]))
                         self.r_press_up.append(int(l[5]))
+                    if ':' in line:
+                        l = line.split(':')[1].split(',')
+                        self.timings_up.append(int(l[0]))
+                        self.l_pos_up.append(int(l[1]))
+                        self.l_press_up.append(0)
             f.close()
             t = self.timings_down[0]
             for i in range(len(self.timings_down)):
@@ -131,6 +167,9 @@ class CalibrationModel(QMainWindow):
         (a3, b3, c3) = get_parabola_coeff(mass_up[temp_up][0], mass_up[temp_up][1],
                                           mass_up[int(len(mass_up) - temp_up / 2)][0], mass_up[int(len(mass_up) - temp_up / 2)][1],
                                           mass_up[len(mass_up) - 1][0], mass_up[len(mass_up) - 1][1])
+
+
+        #Работа с давлением
 
 
         self.suspension_model['max'] = self.l_pos_down[0]
@@ -204,6 +243,10 @@ class CalibrationModel(QMainWindow):
         x2 = self.timings_up[q:w + 1]
         y2 = [a3 * i * i + b3 * i + c3 for i in x2]
 
+        press_approx_up = {'x':[], 'y':[]}
+        t_pr_up = self.timings_up[:]
+        pr_up = [a4 * i * i + b4 * i + c4 for i in t_pr_up]
+
         up_approx['x'].extend(x1)
         up_approx['x'].extend(x2)
         up_approx['y'].extend(y1)
@@ -213,13 +256,27 @@ class CalibrationModel(QMainWindow):
         plt.plot(self.timings_down, self.l_pos_down, 'r')
         plt.plot(down_approx['x'], down_approx['y'], 'b')
         plt.scatter(dot_x_d, dot_y_d, color="black")
+        plt.ylabel("Позиция")
+        plt.xlabel("Время, мс")
+        plt.grid(True)
+
         plt.figure(2)
         plt.plot(self.timings_up, self.l_pos_up, 'r')
         plt.plot(up_approx['x'], up_approx['y'], 'b')
         #plt.plot(dot_x, dot_y,  marker='o', markersize=6, color="black")
         plt.scatter(dot_x, dot_y,color="black")
-
+        plt.ylabel("Позиция")
+        plt.xlabel("Время, мс")
         plt.grid(True)
+
+        plt.figure(3)
+        plt.plot(self.timings_up, self.l_press_up, 'r')
+        plt.plot(t_pr_up, pr_up, 'b')
+        # plt.plot(dot_x, dot_y,  marker='o', markersize=6, color="black")
+        plt.ylabel("Давление")
+        plt.xlabel("Время, мс")
+        plt.grid(True)
+
         plt.show()
 
     def get_t_up(self, pos):
@@ -317,6 +374,45 @@ def get_linear_coeff(x1, y1, x2, y2):
     k = (y2 - y1) / (x2 - x1)
     b = y1 - k * x1
     return k, b
+
+def fir_lowpass_filter(time, data):
+    filtered_data = []
+    time_filtered_data = []
+
+    FIRCoef = [
+        24691,
+        26057,
+        27088,
+        27733,
+        27952,
+        27733,
+        27088,
+        26057,
+        24691,
+        23048
+    ]
+    DCgain = 262144
+
+    for i in range(10, len(data)):
+        y = 0
+        for j in range(len(FIRCoef)):
+            y += FIRCoef[j] * data[i-10+j]
+        y = int(y / DCgain)
+
+        filtered_data.append(y)
+        time_filtered_data.append(time[i])
+    return  time_filtered_data, filtered_data
+
+def med_filter(time, data):
+    filtered_data = []
+    time_filtered_data = []
+
+    for i in range(10, len(data)):
+        y = median(data[i-10:i])
+        filtered_data.append(y)
+        time_filtered_data.append(time[i])
+
+    return time_filtered_data, filtered_data
 
 
 if __name__ == '__main__':
