@@ -38,9 +38,34 @@ class DataVisualisation(QMainWindow):
         self.csvFileName = ''
 
         self.open_file()
-        #print("Variance is", variance(self.l_pos))
+        print("Variance is", variance(self.l_pos), variance(self.r_pos), variance(self.l_press), variance(self.r_press))
+        plt.figure(1)
+        hist, bins = np.histogram(self.l_pos, bins=int(len(self.l_pos) ** (1/3.0)))
+        width = 0.7 * (bins[1] - bins[0])
+        center = (bins[:-1] + bins[1:]) / 2
+        plt.bar(center, hist, align='center', width=width)
+        #plt.show()
+        plt.figure(2)
+        hist, bins = np.histogram(self.r_pos, bins=int(len(self.r_pos) ** (1 / 3.0)))
+        width = 0.7 * (bins[1] - bins[0])
+        center = (bins[:-1] + bins[1:]) / 2
+        plt.bar(center, hist, align='center', width=width)
+        #plt.show()
+        plt.figure(3)
+        hist, bins = np.histogram(self.l_press, bins=int(len(self.l_press) ** (1 / 3.0)))
+        width = 0.7 * (bins[1] - bins[0])
+        center = (bins[:-1] + bins[1:]) / 2
+        plt.bar(center, hist, align='center', width=width)
+        #plt.show()
+        plt.figure(4)
+        hist, bins = np.histogram(self.r_press, bins=int(len(self.r_press) ** (1 / 3.0)))
+        width = 0.7 * (bins[1] - bins[0])
+        center = (bins[:-1] + bins[1:]) / 2
+        plt.bar(center, hist, align='center', width=width)
+        plt.show()
+
         #self.calculate_acceleration()
-        self.processCalibration()
+        #self.processCalibration()
 
         #self.prepare_data()
         #self.filter_position()

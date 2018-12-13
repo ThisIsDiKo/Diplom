@@ -149,6 +149,12 @@ class CalibrationModel(QMainWindow):
                                           mass[int(len(mass) - temp/2)][0], mass[int(len(mass) - temp/2)][1],
                                           mass[len(mass) - 1][0], mass[len(mass) - 1][1])
 
+        print(len(self.l_press_up), end=' ')
+        press = [self.l_press_up[0] for i in range(10)]
+        press.extend(fir_lowpass_filter(self.timings_up, self.l_press_up)[1])
+        self.l_press_up = press;
+        print(len(self.l_press_up))
+
         prev_pos = self.l_pos_up[0]
         mass_up = []
         for p in self.l_pos_up:
@@ -158,7 +164,8 @@ class CalibrationModel(QMainWindow):
                                 self.l_press_up[self.l_pos_up.index(p)]])
                 prev_pos = p
 
-
+        plt.figure(8)
+        plt.plot(self.timings_up,self.l_press_up)
 
         temp_up= int(len(mass_up) / 2)  # вообще 3, но пох)
         (a2, b2, c2) = get_parabola_coeff(mass_up[0][0], mass_up[0][1],
@@ -168,7 +175,14 @@ class CalibrationModel(QMainWindow):
                                           mass_up[int(len(mass_up) - temp_up / 2)][0], mass_up[int(len(mass_up) - temp_up / 2)][1],
                                           mass_up[len(mass_up) - 1][0], mass_up[len(mass_up) - 1][1])
 
-
+        temp1= int(len(mass_up) / 3)
+        temp2 = int(len(mass_up) / 2)
+        coeff1 = self.l_press_up[0]
+        coeff_a = ((mass_up[temp2][2] - coeff1) ** 2 - (mass_up[temp1][2] - coeff1) ** 2) / (mass_up[temp2][0] - mass_up[temp1][0])
+        coeff_c = (mass_up[temp1][2] - coeff1) ** 2 - coeff_a * mass_up[temp1][0]
+        print("coeffs: ", coeff1, coeff_a, coeff_c)
+        pressure_approx = [sqrt(coeff_a * i + coeff_c) + coeff1 for i in self.timings_up]
+        plt.plot(self.timings_up, pressure_approx)
         #Работа с давлением
 
 
@@ -245,7 +259,7 @@ class CalibrationModel(QMainWindow):
 
         press_approx_up = {'x':[], 'y':[]}
         t_pr_up = self.timings_up[:]
-        pr_up = [a4 * i * i + b4 * i + c4 for i in t_pr_up]
+        #pr_up = [a4 * i * i + b4 * i + c4 for i in t_pr_up]
 
         up_approx['x'].extend(x1)
         up_approx['x'].extend(x2)
@@ -271,7 +285,7 @@ class CalibrationModel(QMainWindow):
 
         plt.figure(3)
         plt.plot(self.timings_up, self.l_press_up, 'r')
-        plt.plot(t_pr_up, pr_up, 'b')
+        #plt.plot(t_pr_up, pr_up, 'b')
         # plt.plot(dot_x, dot_y,  marker='o', markersize=6, color="black")
         plt.ylabel("Давление")
         plt.xlabel("Время, мс")
