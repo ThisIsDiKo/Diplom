@@ -42,7 +42,7 @@ class DataVisualisation(QMainWindow):
     def open_file(self):
         prevSpd = 0.0
         prevTime = 0
-        self.filenames = QFileDialog.getOpenFileNames(self,'Open File', 'C:\\Users\\ADiKo\\Desktop\\', 'txt file (*.txt)')[0]
+        self.filenames = QFileDialog.getOpenFileNames(self,'Open File', 'C:\\Users\\ADiKo\\Desktop\\demos', 'txt file (*.txt)')[0]
         print(self.filenames)
         #self.csvFileName = fname.split('.')[0] + ".csv"
         try:

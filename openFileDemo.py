@@ -38,6 +38,7 @@ class DataVisualisation(QMainWindow):
         self.csvFileName = ''
 
         self.open_file()
+        '''
         print("Variance is", variance(self.l_pos), variance(self.r_pos), variance(self.l_press), variance(self.r_press))
         plt.figure(1)
         hist, bins = np.histogram(self.l_pos, bins=int(len(self.l_pos) ** (1/3.0)))
@@ -63,13 +64,14 @@ class DataVisualisation(QMainWindow):
         center = (bins[:-1] + bins[1:]) / 2
         plt.bar(center, hist, align='center', width=width)
         plt.show()
+        '''
 
         #self.calculate_acceleration()
         #self.processCalibration()
 
         #self.prepare_data()
         #self.filter_position()
-        #self.show_data()
+        self.show_data()
         #self.write_to_csv()
     def calculate_acceleration(self):
         clearence_range = 0.13
