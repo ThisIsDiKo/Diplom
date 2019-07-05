@@ -332,6 +332,7 @@ class DataVisualisation(QMainWindow):
             plt.plot(self.timings[i], self.l_pos[i], colors[i])
             plt.ylabel("Позиция")
             plt.xlabel("Время, мс")
+            plt.title("График изменения клиренса", fontsize=18)
             plt.grid(True)
             plt.figure(2)
             plt.plot(self.timings[i], self.l_press[i], colors[i])

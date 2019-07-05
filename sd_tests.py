@@ -21,9 +21,14 @@ class DataVisualisation(QMainWindow):
         self.working_list = []
         self.working_time = []
 
+        self.var = []
+        self.t_var = []
+
         self.open_file()
+        self.simulate_contrast_algorithm()
 
         self.show_data()
+
 
 
     def open_file(self):
@@ -75,32 +80,73 @@ class DataVisualisation(QMainWindow):
 
         delta = self.working_time[0]
 
-        for i in range(len( self.working_time)):
+        for i in range(len(self.working_time)):
             self.working_time[i] -= delta
+
+    def simulate_contrast_algorithm(self):
+        self.var = []
+        self.t_var = []
+
+        for i in range(40, len(self.working_list), 40):
+            #print(self.working_list[i-40:i])
+            self.t_var.append(self.working_time[i])
+            self.var.append(self.calculate_sd(self.working_list[i-40:i]))
+
+
+        for i in range(len(self.var)):
+            if self.var[i] < 2:
+                self.var[i] = 1
+            else:
+                self.var[i] = 0
+
+
+    def calculate_sd(self, l):
+        meanL = 0
+        varL = 0
+        for i in range(len(l)):
+            meanL += l[i]
+        meanL = int(meanL / len(l))
+
+        for i in range(len(l)):
+            varL += (l[i] - meanL)**2
+
+        varL = int(varL / (len(l) - 1))
+        varL = int(sqrt(varL))
+        return varL
 
 
     def show_data(self):
+        plt.figure(1)
         plt.plot(self.working_time, self.working_list, 'k')
         plt.plot(self.working_time, self.filtered, 'k--')
-        plt.title("График изменения высоты шасси над землей при движении автомобиля")
+        plt.title("График изменения высоты шасси над землей при движении автомобиля", fontsize=18)
         plt.xlabel("Время, мс")
         plt.ylabel("Позиция")
         plt.xlim(0, max(self.working_time))
-        #plt.plot(self.timings, self.l_press, 'b')
-        #plt.plot(self.timings, self.movement, 'g')
-        #plt.plot(self.timings, self.floatingVar, 'b')
-        #plt.plot(self.timings, self.floatVarSpd, 'k')
-        #plt.scatter(self.overMarkX, self.overMarkY, c='k')
-        #plt.scatter(self.moreThanVarX, self.moreThanVarY, c='c')
+        plt.legend(('Исходный сигнал', 'Сигнал на выходе ФНЧ'))
+        plt.grid(True)
 
-        #plt.plot(x, y1, 'y')
-        #plt.plot(x, y2, 'y')
+        plt.figure(2)
+        ax1 = plt.subplot(211)
+        plt.title("График изменения высоты шасси над землей при движении автомобиля", fontsize=18)
+        plt.plot(self.working_time, self.working_list, 'k')
+        plt.grid(True)
+        plt.ylabel("Позиция")
 
-        #plt.plot(self.x1_par, self.y1_par, 'g')
-        #plt.plot(self.x2_lin, self.y2_lin, 'k')
-        #plt.plot(self.x3_par, self.y3_par, 'b')
+        ax2 = plt.subplot(212, sharex=ax1)
+        plt.title("Принятие решения о возможности измерения клиренса")
+        plt.plot(self.t_var, self.var, 'k')
+        plt.ylabel("Решение")
+
+        plt.xlabel("Время, мс")
+
+        plt.xlim(0, max(self.working_time))
 
         plt.grid(True)
+
+
+
+
         plt.show()
 
 

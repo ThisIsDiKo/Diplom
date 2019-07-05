@@ -267,20 +267,24 @@ class CalibrationModel(QMainWindow):
         up_approx['y'].extend(y2)
 
         plt.figure(1)
-        plt.plot(self.timings_down, self.l_pos_down, 'r')
-        plt.plot(down_approx['x'], down_approx['y'], 'b')
+        plt.plot(self.timings_down, self.l_pos_down, 'k')
+        plt.plot(down_approx['x'], down_approx['y'], 'k--')
         plt.scatter(dot_x_d, dot_y_d, color="black")
+        plt.legend(('Эксперимент', 'Аппроксимация'))
+        plt.title("График уменьшения дорожного просвета", fontsize=18)
         plt.ylabel("Позиция")
         plt.xlabel("Время, мс")
         plt.grid(True)
 
         plt.figure(2)
-        plt.plot(self.timings_up, self.l_pos_up, 'r')
-        plt.plot(up_approx['x'], up_approx['y'], 'b')
+        plt.plot(self.timings_up, self.l_pos_up, 'k')
+        plt.plot(up_approx['x'], up_approx['y'], 'k--')
         #plt.plot(dot_x, dot_y,  marker='o', markersize=6, color="black")
         plt.scatter(dot_x, dot_y,color="black")
+        plt.legend(('Эксперимент', 'Аппроксимация'))
         plt.ylabel("Позиция")
         plt.xlabel("Время, мс")
+        plt.title("График увеличения дорожного просвета", fontsize=18)
         plt.grid(True)
 
         plt.figure(3)
@@ -415,7 +419,7 @@ def fir_lowpass_filter(time, data):
 
         filtered_data.append(y)
         time_filtered_data.append(time[i])
-    return  time_filtered_data, filtered_data
+    return time_filtered_data, filtered_data
 
 def med_filter(time, data):
     filtered_data = []

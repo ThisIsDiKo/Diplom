@@ -66,12 +66,12 @@ class DataVisualisation(QMainWindow):
         plt.show()
         '''
 
-        #self.calculate_acceleration()
+        self.calculate_acceleration()
         #self.processCalibration()
 
         #self.prepare_data()
         #self.filter_position()
-        self.show_data()
+        #self.show_data()
         #self.write_to_csv()
     def calculate_acceleration(self):
         clearence_range = 0.13
@@ -139,37 +139,58 @@ class DataVisualisation(QMainWindow):
         thr3 = [6100 for i in time]
 
         plt.figure(1)
-        ax1 = plt.subplot(411)
-        plt.plot(time, pos, 'r')
-        plt.plot(time[100:], pos_f[100:], 'b')
-        plt.plot(time[100:], filtered_with_var[80:], 'y')
-        plt.plot(time[100:], filtered_with_var2[80:], 'y')
+        #ax1 = plt.subplot(411)
+        plt.plot(time, pos, 'k')
+
+        #plt.plot(time[100:], pos_f[100:], 'k--')
+
+        #plt.plot(time[100:], filtered_with_var[80:], 'k:')
+        #plt.plot(time[100:], filtered_with_var2[80:], 'k:')
+        #plt.legend(('Исходный процесс', 'На выходе фильтра', 'Текущий порог сравнения'))
+
         #plt.setp(ax1.get_xticklabels(), fontsize=6)
         plt.ylabel("Позиция, м")
         plt.grid(True)
-
+        plt.xlabel("Время, с")
+        '''
         ax2 = plt.subplot(412, sharex=ax1)
-        plt.plot(time, speed, 'b')
+        plt.plot(time, speed, 'k')
+        t = [0.5 for i in time]
+        ti = [-i for i in t]
+
+        plt.plot(time, t, 'k:')
+        plt.plot(time, ti, 'k:')
+
         #plt.setp(ax2.get_xticklabels(), visible=False)
         plt.ylabel("Скорость, м/с")
         plt.grid(True)
 
         ax3 = plt.subplot(413, sharex=ax1)
-        plt.plot(time, acceleration, 'g')
-        plt.plot(time, thr, 'y')
+
+        thri = [-i for i in thr]
+        plt.plot(time, acceleration, 'k')
+
+        plt.plot(time, thr, 'k:')
+        plt.plot(time, thri, 'k:')
+
         #plt.setp(ax3.get_xticklabels(), visible=False)
         plt.ylabel("Ускорение, м/с^2")
         plt.grid(True)
 
         ax4 = plt.subplot(414, sharex=ax1)
         plt.plot(time, acc_2, 'k')
-        #plt.plot(time, thr1, 'y')
-        #plt.plot(time, thr2, 'y')
-        plt.plot(time, thr3, 'y')
+        plt.plot(time, thr1, 'k:')
+        plt.plot(time, thr2, 'k:')
+        thr3i = [-i for i in thr3]
+
+        plt.plot(time, thr3, 'k:')
+        plt.plot(time, thr3i, 'k:')
+
         #plt.setp(ax3.get_xticklabels(), visible=False)
         plt.ylabel("Рывок, cм/с^3")
         plt.xlabel("Время, с")
         plt.grid(True)
+        '''
         plt.show()
 
     def filter_position(self):
@@ -235,13 +256,14 @@ class DataVisualisation(QMainWindow):
         #plt.plot(self.timings[100:], filtered_mov[100:], 'k')
         self.write_to_csv(road_imp_list)
         plt.grid(True)
+
         plt.show()
 
     def open_file(self):
         prevSpd = 0.0
         prevTime = 0
         last_navinfo = (0,0)
-        fname = QFileDialog.getOpenFileName(self,'Open File', 'C:\\Users\\ADiKo\\Desktop\\', 'txt file (*.txt)')[0]
+        fname = QFileDialog.getOpenFileName(self,'Open File', 'C:\\Users\\ADiKo\\Desktop\\diplom\\demos', 'txt file (*.txt)')[0]
         print(fname)
         self.csvFileName = fname.split('.')[0] + ".csv"
         try:
@@ -270,14 +292,14 @@ class DataVisualisation(QMainWindow):
 
                     if l[0] is 'b':
                         lat1 = float(l[1][:2])
-                        lat2 = float(l[1][2:]) * 100 / 60 / 100;
-                        lat = lat1 + lat2;
+                        lat2 = float(l[1][2:]) * 100 / 60 / 100
+                        lat = lat1 + lat2
                         if l[2] is 'S':
                             lat = -lat
 
                         lon1 = float(l[3][:2])
-                        lon2 = float(l[3][2:]) * 100 / 60 / 100;
-                        lon = lon1 + lon2;
+                        lon2 = float(l[3][2:]) * 100 / 60 / 100
+                        lon = lon1 + lon2
                         if l[4] is 'W':
                             lon = -lon
 
@@ -434,7 +456,7 @@ class DataVisualisation(QMainWindow):
         lp_approx['y'].extend(y1)
         lp_approx['y'].extend(y2)
 
-
+        '''
         plt.figure(1)
         plt.plot(self.timings, self.l_pos, 'k')
         plt.plot(plp_approx['x'], plp_approx['y'], 'k--')
@@ -481,16 +503,20 @@ class DataVisualisation(QMainWindow):
         plt.grid(True)
 
         #print("len:", len(plp_approx['x']), len(lll_approx['x']), len(l_approx['x']), len(pp_approx['x']))
+        '''
 
         print("err plp:", get_error_meaning(self.timings, self.l_pos, plp_approx['x'], plp_approx['y']))
         print("err lll:", get_error_meaning(self.timings, self.l_pos, lll_approx['x'], lll_approx['y']))
         print("err l:", get_error_meaning(self.timings, self.l_pos, l_approx['x'], l_approx['y']))
         print("err pp:", get_error_meaning(self.timings, self.l_pos, pp_approx['x'], pp_approx['y']))
         print("err lp:", get_error_meaning(self.timings, self.l_pos, lp_approx['x'], lp_approx['y']))
+        print("num of dots:", len(self.timings))
+        '''
         plt.grid(True)
         plt.xlabel("Время, мс")
         plt.ylabel("Позиция")
         plt.show()
+        '''
 
 
 
@@ -612,7 +638,7 @@ def get_error_meaning(x_ref, y_ref, x, y):
         index = x_ref.index(x[i])
         err += (y_ref[index] - y[i]) ** 2
 
-    err = sqrt(err) / len(x)
+    err = sqrt(err / len(x))
     return err
 
 def butter_lowpass(cutoff, fs, order=5):
@@ -633,4 +659,4 @@ if __name__ == '__main__':
     print(get_error_meaning([1,2,3,4,5,6],[5,5,5,5,5,5],[2,3,4,5], [1,2,3,4]))
     app = QApplication(sys.argv)
     ex = DataVisualisation()
-    sys.exit(app.exec_())
+    #sys.exit(app.exec_())
